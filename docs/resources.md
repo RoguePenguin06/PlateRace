@@ -12,3 +12,4 @@
 
 ## Pygame
 - [RealPython: PyGame: A Primer on Game Programming in Python](https://realpython.com/pygame-a-primer)
+- [RealPython: Structuring your game](https://realpython.com/videos/structuring-your-game/)
