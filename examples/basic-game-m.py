@@ -18,8 +18,19 @@ pygame.init()
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 
+# Define a Player Object by etending pygame.sprite.Sprite.
+# The surface drawn on the screen is now an atrribute of 'player'
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+        super(Player, self).__init__()
+        self.surf = pygame.Surface((75,75))
+        self.surf.fill((255,255,255))
+        self.rect = self.surf.get_rect()
+
 # create screen object
 screen = pygame.display.set_mode([SCREEN_WIDTH, SCREEN_HEIGHT])
+
+player = Player()
 
 # Every game has a gameplay loop that does 4 important things:
 #    - Processes user input
@@ -47,15 +58,7 @@ while running:
         elif event.type == QUIT:
             running = False
 
-    screen.fill((255,255,255))
-    surf = pygame.Surface((50,50))
-    surf.fill((0,0,0))
-    rect = surf.get_rect()
+    screen.fill((0,0,0))
     
-    surf_centre = (
-        (SCREEN_WIDTH-surf.get_width())/2,
-        (SCREEN_HEIGHT-surf.get_height())/2
-    )
-    
-    screen.blit(surf,surf_centre)
+    screen.blit(player.surf,player.rect)
     pygame.display.flip()   
