@@ -14,3 +14,4 @@
 ## Pygame
 - [RealPython: PyGame: A Primer on Game Programming in Python](https://realpython.com/pygame-a-primer)
 - [RealPython: Structuring your game](https://realpython.com/videos/structuring-your-game/)
+- [Pygame Car Racing Tutorial](https://youtube.com/playlist?list=PLzMcBGfZo4-kmY7Nh4kI9kPPnxJ5JMRPj&si=QGGeuUEhrdSpkY_C)
