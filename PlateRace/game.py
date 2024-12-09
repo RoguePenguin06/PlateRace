@@ -1,4 +1,8 @@
 import pygame
+import time
+import math
+
+
 
 class PlateRace:
     def __init__(self):
