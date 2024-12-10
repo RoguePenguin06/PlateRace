@@ -6,7 +6,7 @@ from utilities import resize_image, blit_rotate_center
 TRACK = resize_image(pygame.image.load("PlateRace\\assets\Track.png"), 2.5)
 CAR = resize_image(pygame.image.load("PlateRace\\assets\SportsCar.png"), 0.5)
 GRASS = resize_image(pygame.image.load("PlateRace\\assets\grass.png"), 3)
-FINISH = resize_image(pygame.image.load("PlateRace\\assets\Finish.png"), 2.5)
+FINISH = resize_image(pygame.image.load("PlateRace\\assets\Finish.png"), 2.6)
 
 angle = 0
 
@@ -76,7 +76,7 @@ class PlateRace:
     def _draw(self):
         self.screen.blit(GRASS, (0, 0))
         self.screen.blit(TRACK, (0, 0))
-        self.screen.blit(FINISH, (440, 516))
+        self.screen.blit(FINISH, (831, 300))
         player_car.draw()
         #pygame.display.flip()
         pygame.display.update()
