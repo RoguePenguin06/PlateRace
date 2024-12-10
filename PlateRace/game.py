@@ -1,10 +1,32 @@
 import pygame
 import time
 import math
+from utilities import resize_image, blit_rotate_center
 
-TRACK = pygame.image.load("assests/Track.png")
-CAR = pygame.image.load("assets/SportsCar.png")
-GRASS = pygame.image.load("assets/grass.png")
+TRACK = resize_image(pygame.image.load("PlateRace\\assets\Track.png"), 2.5)
+CAR = resize_image(pygame.image.load("PlateRace\\assets\SportsCar.png"), 0.5)
+GRASS = resize_image(pygame.image.load("PlateRace\\assets\grass.png"), 3)
+FINISH = resize_image(pygame.image.load("PlateRace\\assets\Finish.png"), 2.5)
+
+
+class AbstractCar:
+    def __init__(self, max_velocity):
+        self.img = self.IMG
+        self.max_velocity = max_velocity
+        self.velocity = 0
+        self.angle = 0
+        
+    def rotate(self, angle):
+        self.angle = angle
+        
+    def draw(self):
+        blit_rotate_center(self.img)
+        
+
+class PlayerCar(AbstractCar):
+    IMG = CAR
+    
+        
 
 
 class PlateRace:
@@ -18,6 +40,7 @@ class PlateRace:
         
     def main_loop(self):
         while True:
+            clock.tick(60)
             self._handle_input()
             self._game_logic()
             self._draw()
@@ -29,7 +52,20 @@ class PlateRace:
                 
     def _game_logic(self):
         pass
+        
+
+        
     
     def _draw(self):
-        self.screen.fill((255, 0, 255))
-        pygame.display.flip()
+        self.screen.blit(GRASS, (0, 0))
+        self.screen.blit(TRACK, (0, 0))
+        self.screen.blit(FINISH, (440, 516))
+        self.screen.blit(CAR, (420, 500))
+        #pygame.display.flip()
+        pygame.display.update()
+        
+
+
+clock = pygame.time.Clock()
+
+player_car = PlayerCar(10)
