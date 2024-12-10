@@ -8,35 +8,52 @@ CAR = resize_image(pygame.image.load("PlateRace\\assets\SportsCar.png"), 0.5)
 GRASS = resize_image(pygame.image.load("PlateRace\\assets\grass.png"), 3)
 FINISH = resize_image(pygame.image.load("PlateRace\\assets\Finish.png"), 2.5)
 
+angle = 0
+
 
 class AbstractCar:
     def __init__(self, max_velocity):
         self.img = self.IMG
         self.max_velocity = max_velocity
         self.velocity = 0
-        self.angle = 0
+        self.angle = 90
+        self.x, self.y = self.START_POS
         
-    def rotate(self, angle):
+    def rotate(self):
+        global angle
+        
+        keys = pygame.key.get_pressed()
+
+        if keys[pygame.K_a]:
+            angle += 5
+        if keys[pygame.K_d]:
+            angle -= 5
+
+
         self.angle = angle
         
     def draw(self):
-        blit_rotate_center(self.img)
+        blit_rotate_center(WIN, self.img, (self.x, self.y), self.angle)
         
 
 class PlayerCar(AbstractCar):
     IMG = CAR
+    START_POS = (420, 500)
     
-        
+WIDTH, HEIGHT = TRACK.get_width(), TRACK.get_height()        
 
+def window():
+    global WIN
+    pygame.display.set_caption("PlateRace")
+    WIN = pygame.display.set_mode((WIDTH, HEIGHT))
+    return WIN
+    
 
 class PlateRace:
     def __init__(self):
         pygame.init()
-
-        WIDTH, HEIGHT = TRACK.get_width(), TRACK.get_height()
-        pygame.display.set_caption("PlateRace")
         
-        self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        self.screen = window()
         
     def main_loop(self):
         while True:
@@ -51,7 +68,7 @@ class PlateRace:
                 quit()
                 
     def _game_logic(self):
-        pass
+        player_car.rotate()
         
 
         
@@ -60,7 +77,7 @@ class PlateRace:
         self.screen.blit(GRASS, (0, 0))
         self.screen.blit(TRACK, (0, 0))
         self.screen.blit(FINISH, (440, 516))
-        self.screen.blit(CAR, (420, 500))
+        player_car.draw()
         #pygame.display.flip()
         pygame.display.update()
         
