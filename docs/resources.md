@@ -13,3 +13,9 @@
 ## Pygame
 - [RealPython: PyGame: A Primer on Game Programming in Python](https://realpython.com/pygame-a-primer)
 - [RealPython: Structuring your game](https://realpython.com/videos/structuring-your-game/)
+
+
+## Computer Vision
+ - [Computer Vision Game Development in 3 Hours | OpenCV Python](https://www.youtube.com/watch?v=lDfplevUWRw)
+ - [FreeCodeCamp: OpenCV Course - Full Tutorial with Python](https://www.youtube.com/watch?v=oXlwWbU8l2o&t=56s)
+   - [GitHub Repo](https://github.com/jasmcaus/opencv-course)
