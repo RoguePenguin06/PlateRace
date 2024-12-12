@@ -164,6 +164,10 @@ cython_debug/
 
 # Project files
 *.key
+PlateRace/controller/util/Resources/
 
 # visual studio
 *.vs
+
+# OSX
+*.DS_STORE
