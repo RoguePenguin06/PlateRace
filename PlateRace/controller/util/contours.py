@@ -12,7 +12,7 @@ import cv2 as cv
 import numpy as np
 
 img = cv.imread('./controller.png')
-cv.imshow("Cats", img)
+cv.imshow("Controller", img)
 
 blank = np.zeros(img.shape, dtype='uint8')
 cv.imshow("Blank", blank)
