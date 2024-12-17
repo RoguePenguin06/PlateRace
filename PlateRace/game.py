@@ -9,6 +9,7 @@ GRASS = resize_image(pygame.image.load("PlateRace\\assets\grass.png"), 3)
 FINISH = resize_image(pygame.image.load("PlateRace\\assets\Finish.png"), 2.6)
 
 angle_D = 0
+direction = 0
 
 
 class AbstractCar:
@@ -19,12 +20,40 @@ class AbstractCar:
         self.angle = 0
         self.x, self.y = self.START_POS
         self.acceleration = 0.1
+        self.deceleration = 0.5
         
     def rotate(self):
         global angle_D
         
-        keys = pygame.key.get_pressed()
+        self.angle = angle_D
+        
+    def draw(self):
+        blit_rotate_center(WIN, self.img, (self.x, self.y), self.angle)
 
+    
+
+    def change_velocity(self):
+        global direction
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_w]:
+            self.velocity = min(self.velocity + self.acceleration, self.max_velocity)
+            direction = 1
+        elif keys[pygame.K_s]:
+            self.velocity = min(self.velocity + self.acceleration, self.max_velocity)
+            direction = -0.25
+        else:
+            self.velocity = max(self.velocity - self.deceleration, 0)
+        
+
+class PlayerCar(AbstractCar):
+    IMG = CAR
+    START_POS = (420, 500)
+    
+    def move(self):
+        global angle_D
+        global direction
+        
+        keys = pygame.key.get_pressed()
         if keys[pygame.K_a]:
             angle_D += 5
         if keys[pygame.K_d]:
@@ -33,13 +62,8 @@ class AbstractCar:
             angle_D += 360
         if angle_D > 360:
             angle_D -= 360
+        self.rotate()
 
-        self.angle = angle_D
-        
-    def draw(self):
-        blit_rotate_center(WIN, self.img, (self.x, self.y), self.angle)
-
-    def move(self):
         self.change_velocity()
 
         angle_R = angle_D * (math.pi/180)
@@ -61,18 +85,8 @@ class AbstractCar:
             self.V_velocity = -self.velocity * math.sin(angle_R-((3*math.pi)/2))
 
 
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_SPACE]:
-            self.x += self.H_velocity
-            self.y += self.V_velocity
-
-    def change_velocity(self):
-        self.velocity = min(self.velocity + self.acceleration, self.max_velocity)
-        
-
-class PlayerCar(AbstractCar):
-    IMG = CAR
-    START_POS = (420, 500)
+        self.x += self.H_velocity * direction
+        self.y += self.V_velocity * direction          
     
 WIDTH, HEIGHT = TRACK.get_width(), TRACK.get_height()        
 
