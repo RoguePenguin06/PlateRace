@@ -8,12 +8,12 @@ CAR = resize_image(pygame.image.load("PlateRace\\assets\SportsCar.png"), 0.5)
 GRASS = resize_image(pygame.image.load("PlateRace\\assets\grass.png"), 3)
 FINISH = resize_image(pygame.image.load("PlateRace\\assets\Finish.png"), 2.6)
 
-angle_D = 0
+angle_D = [0, 0]
 direction = 0
 
 
 class AbstractCar:
-    def __init__(self, max_velocity):
+    def __init__(self, max_velocity, player_num):
         self.img = self.IMG
         self.max_velocity = max_velocity
         self.velocity = 0
@@ -21,11 +21,17 @@ class AbstractCar:
         self.x, self.y = self.START_POS
         self.acceleration = 0.1
         self.deceleration = 0.5
+        self.PLAYER_NUM = player_num
+        
+        if self.PLAYER_NUM == 1:
+            self.controls = [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]
+        elif self.PLAYER_NUM == 2:
+            self.controls = [pygame.K_UP, pygame.K_LEFT, pygame.K_DOWN, pygame.K_RIGHT]
         
     def rotate(self):
         global angle_D
         
-        self.angle = angle_D
+        self.angle = angle_D[self.PLAYER_NUM - 1]
         
     def draw(self):
         blit_rotate_center(WIN, self.img, (self.x, self.y), self.angle)
@@ -35,10 +41,10 @@ class AbstractCar:
     def change_velocity(self):
         global direction
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_w]:
+        if keys[self.controls[0]]:
             self.velocity = min(self.velocity + self.acceleration, self.max_velocity)
             direction = 1
-        elif keys[pygame.K_s]:
+        elif keys[self.controls[2]]:
             self.velocity = min(self.velocity + self.acceleration, self.max_velocity)
             direction = -0.25
         else:
@@ -54,33 +60,33 @@ class PlayerCar(AbstractCar):
         global direction
         
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_a]:
-            angle_D += 5
-        if keys[pygame.K_d]:
-            angle_D -= 5
-        if angle_D < 0:
-            angle_D += 360
-        if angle_D > 360:
-            angle_D -= 360
+        if keys[self.controls[1]]:
+            angle_D[self.PLAYER_NUM - 1] += 5
+        if keys[self.controls[3]]:
+            angle_D[self.PLAYER_NUM - 1] -= 5
+        if angle_D[self.PLAYER_NUM - 1] < 0:
+            angle_D[self.PLAYER_NUM - 1] += 360
+        if angle_D[self.PLAYER_NUM - 1] > 360:
+            angle_D[self.PLAYER_NUM - 1] -= 360
         self.rotate()
 
         self.change_velocity()
 
-        angle_R = angle_D * (math.pi/180)
+        angle_R = angle_D[self.PLAYER_NUM - 1] * (math.pi/180)
 
-        if angle_D <= 90:
+        if angle_D[self.PLAYER_NUM - 1] <= 90:
             self.H_velocity = -self.velocity * math.sin(angle_R)
             self.V_velocity = -self.velocity * math.cos(angle_R)
 
-        elif angle_D <= 180:
+        elif angle_D[self.PLAYER_NUM - 1] <= 180:
             self.H_velocity = -self.velocity * math.cos(angle_R-(math.pi/2))
             self.V_velocity = self.velocity * math.sin(angle_R-(math.pi/2))
 
-        elif angle_D <= 270:
+        elif angle_D[self.PLAYER_NUM - 1] <= 270:
             self.H_velocity = self.velocity * math.sin(angle_R-math.pi)
             self.V_velocity = self.velocity * math.cos(angle_R-math.pi)
 
-        elif angle_D <= 360:
+        elif angle_D[self.PLAYER_NUM - 1] <= 360:
             self.H_velocity = self.velocity * math.cos(angle_R-((3*math.pi)/2))
             self.V_velocity = -self.velocity * math.sin(angle_R-((3*math.pi)/2))
 
@@ -116,8 +122,8 @@ class PlateRace:
                 quit()
                 
     def _game_logic(self):
-        player_car.rotate()
-        player_car.move()
+        player_1_car.move()
+        player_2_car.move()
         
 
        
@@ -125,10 +131,12 @@ class PlateRace:
         self.screen.blit(GRASS, (0, 0))
         self.screen.blit(TRACK, (0, 0))
         self.screen.blit(FINISH, (831, 300))
-        player_car.draw()
+        player_1_car.draw()
+        player_2_car.draw()
         pygame.display.update()
         
 
 clock = pygame.time.Clock()
 
-player_car = PlayerCar(10)
+player_1_car = PlayerCar(10, 1)
+player_2_car = PlayerCar(10, 2)
