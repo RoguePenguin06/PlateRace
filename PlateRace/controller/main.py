@@ -1,7 +1,5 @@
 import cv2
 import mediapipe as mp
-import numpy as np
-import time
 
 cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 600)
