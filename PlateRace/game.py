@@ -36,12 +36,12 @@ quitTimer = 3
 
 
 class AbstractCar:
-    def __init__(self, max_velocity, player_num):
+    def __init__(self, max_velocity, player_num, start_pos):
         self.max_velocity_onTrack = max_velocity
         self.max_velocity = max_velocity
         self.velocity = 0
         self.angle = 0
-        self.x, self.y = self.START_POS
+        self.x, self.y = start_pos
         self.acceleration = 0.1
         self.deceleration = 0.5
         self.lap = 0
@@ -97,8 +97,6 @@ class AbstractCar:
         
 
 class PlayerCar(AbstractCar):
-    START_POS = (420, 500)
-    
     
     def move(self):
         global angle_D
@@ -242,5 +240,5 @@ class PlateRace:
 
 clock = pygame.time.Clock()
 
-player_1_car = PlayerCar(10, 1)
-player_2_car = PlayerCar(10, 2)
+player_1_car = PlayerCar(10, 1, (845, 350))
+player_2_car = PlayerCar(10, 2, (910, 350))
