@@ -72,7 +72,7 @@ class HandTracker:
             wrist_positions.append((wrist_x, wrist_y, hand_type))
             
             # Display hand type
-            cv2.putText(frame, f"{hand_type} Hand", (wrist_x-50, wrist_y-20),
+            cv2.putText(frame, f"{hand_type} Hand", (wrist_x-50, wrist_y+50),
                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
                        
         return wrist_positions
