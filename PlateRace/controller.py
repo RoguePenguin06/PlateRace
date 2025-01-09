@@ -1,7 +1,7 @@
 
 import cv2
 
-from hand_tracker import HandTracker
+from PlateRace.hand_tracker import HandTracker
 
 
 class GameController:
