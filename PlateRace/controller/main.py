@@ -9,69 +9,69 @@ cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 400)
 
 mp_drawing = mp.solutions.drawing_utils
 mp_hands = mp.solutions.hands
-hands = mp_hands.Hands()
+hands = mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.5)
 
-# Variables to track hand position and time
-last_position = None
-last_time = time.time()
-movement_vector = np.zeros(2)  # Changed to 2D (x,y only)
-
-def get_hand_position(hand_landmarks):
-    # Get only X and Y of the wrist point (point 0)
-    return np.array([
-        hand_landmarks.landmark[0].x,
-        hand_landmarks.landmark[0].y
-    ])
-
-def calculate_movement(current_pos, last_pos):
-    if last_pos is None:
-        return np.zeros(2)
-    return current_pos - last_pos
+left_hand_color = (255, 0, 0)  # Blue for left hand
+right_hand_color = (0, 0, 255)  # Red for right hand
 
 while True:
     success, frame = cap.read()
     if success:
-        # Flip the frame horizontally
         frame = cv2.flip(frame, 1)
-        
         frame_RGB = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         result = hands.process(frame_RGB)
         
-        current_time = time.time()
-    
+        # Store wrist positions
+        wrist_positions = []
+        
         if result.multi_hand_landmarks:
-            for hand_landmarks in result.multi_hand_landmarks:
+            for hand_landmarks, handedness in zip(result.multi_hand_landmarks, result.multi_handedness):
+                hand_type = handedness.classification[0].label
+                color = left_hand_color if hand_type == "Left" else right_hand_color
+                
                 # Draw landmarks
-                mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+                mp_drawing.draw_landmarks(
+                    frame,
+                    hand_landmarks,
+                    mp_hands.HAND_CONNECTIONS,
+                    mp_drawing.DrawingSpec(color=color, thickness=2, circle_radius=2),
+                    mp_drawing.DrawingSpec(color=color, thickness=2)
+                )
                 
-                # Get current hand position (x,y only)
-                current_position = get_hand_position(hand_landmarks)
+                # Get wrist position
+                h, w, _ = frame.shape
+                wrist_x = int(hand_landmarks.landmark[0].x * w)
+                wrist_y = int(hand_landmarks.landmark[0].y * h)
+                wrist_positions.append((wrist_x, wrist_y, hand_type))
                 
-                # Calculate movement vector every 0.5 seconds
-                if current_time - last_time >= 0.5:
-                    movement_vector = calculate_movement(current_position, last_position)
-                    last_position = current_position.copy()
-                    last_time = current_time
-                
-                # Display the movement vector components
-                cv2.putText(frame, f"X Movement: {movement_vector[0]:.4f}", (10, 30),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
-                cv2.putText(frame, f"Y Movement: {movement_vector[1]:.4f}", (10, 60),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
-
-                # Draw arrow to visualize movement
-                frame_height, frame_width = frame.shape[:2]
-                center_x = int(frame_width/2)
-                center_y = int(frame_height/2)
-                
-                # Scale the movement vector for visualization
-                scale = 500  # Adjust this value to make the arrow more/less visible
-                end_x = center_x + int(movement_vector[0] * scale)
-                end_y = center_y + int(movement_vector[1] * scale)
-                
-                # Draw arrow
-                cv2.arrowedLine(frame, (center_x, center_y), (end_x, end_y), 
-                               (0, 255, 0), 2)
+                # Display hand type
+                cv2.putText(frame, f"{hand_type} Hand", (wrist_x-50, wrist_y-20),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+        
+        # If we detect both hands, draw line and calculate gradient
+        if len(wrist_positions) == 2:
+            # Sort positions so left hand is first
+            wrist_positions.sort(key=lambda x: x[2] == "Left", reverse=True)
+            
+            # Draw line between wrists
+            cv2.line(frame, 
+                    (wrist_positions[0][0], wrist_positions[0][1]),
+                    (wrist_positions[1][0], wrist_positions[1][1]),
+                    (0, 255, 0), 2)  # Green line
+            
+            # Calculate gradient
+            dx = wrist_positions[1][0] - wrist_positions[0][0]
+            dy = wrist_positions[1][1] - wrist_positions[0][1]
+            
+            # Avoid division by zero
+            if dx != 0:
+                gradient = dy/dx
+            else:
+                gradient = float('inf')
+            
+            # Display gradient
+            cv2.putText(frame, f"Gradient: {gradient:.2f}", (10, 30),
+                       cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
         cv2.imshow("Hand Tracking", frame)
         if cv2.waitKey(1) == ord('q'):
