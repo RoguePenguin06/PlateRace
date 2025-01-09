@@ -6,6 +6,9 @@ from utilities import resize_image, blit_rotate_center, getDeltaTime
 TRACK = resize_image(pygame.image.load("PlateRace\\assets\Track.png"), 2.5)
 TRACK_MASK = pygame.mask.from_surface(TRACK)
 
+WALL = resize_image(pygame.image.load("PlateRace\\assets\wall.png"), 2.5)
+WALL_MASK = pygame.mask.from_surface(WALL)
+
 CAR_BLUE = resize_image(pygame.image.load("PlateRace\\assets\SportsCar(Blue).png"), 0.5)
 CAR_RED = resize_image(pygame.image.load("PlateRace\\assets\SportsCar(Red).png"), 0.5)
 
@@ -16,6 +19,14 @@ FINISH_POS = (831, 300)
 
 P1WIN = resize_image(pygame.image.load("PlateRace\\assets\P1Win.png"), 2.5)
 P2WIN = resize_image(pygame.image.load("PlateRace\\assets\P2Win.png"), 2.5)
+
+
+ANTI_CHEAT_1 = resize_image(pygame.image.load("PlateRace\\assets\AntiCheat1.png"), 2.5)
+ANTI_CHEAT_1_MASK = pygame.mask.from_surface(ANTI_CHEAT_1)
+
+ANTI_CHEAT_2 = resize_image(pygame.image.load("PlateRace\\assets\AntiCheat2.png"), 2.5)
+ANTI_CHEAT_2_MASK = pygame.mask.from_surface(ANTI_CHEAT_2)
+
 
 angle_D = [0, 0]
 direction = 0
@@ -38,6 +49,10 @@ class AbstractCar:
         
         if player_num != 0:
             self.PLAYER_NUM = player_num
+            
+            self.checkpoint1 = True
+            self.checkpoint2 = True
+            self.checkpoint3 = True
         
             if self.PLAYER_NUM == 1:
                 self.controls = [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]
@@ -66,8 +81,15 @@ class AbstractCar:
         self.finish_timer += deltaTime
         if self.finish_timer >= 2:
             if self.collide(FINISH_MASK, *FINISH_POS):
-                self.lap += 1
-                self.finish_timer = 0
+                if (self.checkpoint1 and self.checkpoint2 and self.checkpoint3) or self.PLAYER_NUM == 0:
+                    self.lap += 1
+                    self.checkpoint1 = False
+                    self.checkpoint2 = False
+                    self.checkpoint3 = False
+                    self.finish_timer = 0
+                else:
+                    self.max_velocity_onTrack *= 0.5
+                    self.finish_timer = 0
      
     def raceEnd(self):
         if self.lap > 3:
@@ -93,8 +115,8 @@ class PlayerCar(AbstractCar):
             angle_D[self.PLAYER_NUM - 1] -= 360
         self.rotate()
 
-        self.change_velocity()
         self.onTrack()
+        self.change_velocity()
 
         angle_R = angle_D[self.PLAYER_NUM - 1] * (math.pi/180)
 
@@ -116,6 +138,9 @@ class PlayerCar(AbstractCar):
 
         self.x += self.H_velocity * direction
         self.y += self.V_velocity * direction
+        
+        self.bounce_on_wall()
+        self.antiCheat()
             
         
     def rotate(self):
@@ -134,6 +159,19 @@ class PlayerCar(AbstractCar):
             direction = -0.25
         else:
             self.velocity = max(self.velocity - self.deceleration, 0)
+         
+    def bounce_on_wall(self):
+        if self.collide(WALL_MASK, *(-25, -25)):
+            self.velocity = -self.velocity
+            self.draw()
+            
+    def antiCheat(self):
+        if self.collide(ANTI_CHEAT_1_MASK, *(0, 300)):
+            self.checkpoint1 = True
+        if self.collide(ANTI_CHEAT_2_MASK, *(450, 0)):
+            self.checkpoint2 = True
+        if self.collide(ANTI_CHEAT_2_MASK, *(450, 430)):
+            self.checkpoint3 = True
             
 WIDTH, HEIGHT = TRACK.get_width(), TRACK.get_height()        
 
@@ -186,7 +224,7 @@ class PlateRace:
             gamePlaying = False
             self.screen.blit(P2WIN, (0, 0))
             pygame.display.update()
-            
+       
            
         deltaTime = getDeltaTime()
 
@@ -195,6 +233,8 @@ class PlateRace:
         self.screen.blit(GRASS, (0, 0))
         self.screen.blit(TRACK, (0, 0))
         self.screen.blit(FINISH, FINISH_POS)
+        self.screen.blit(WALL, (-25, -25))
+      
         player_1_car.draw()
         player_2_car.draw()
         pygame.display.update()
