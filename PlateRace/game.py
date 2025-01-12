@@ -218,6 +218,7 @@ class PlateRace:
                     
                     # Update game state if we have a valid frame
                     if player_frame is not None:
+                        cv2.imshow("Multi-Person Hand Tracking", player_frame)
                         self._game_logic(person1_gradient, person2_gradient)
                         self._draw()
                     
