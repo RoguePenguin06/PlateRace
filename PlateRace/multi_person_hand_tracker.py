@@ -3,7 +3,7 @@ import mediapipe as mp
 import numpy as np
 
 class MultiPersonHandTracker:
-    def __init__(self, width=400, height=400, min_detection_confidence=0.7, min_tracking_confidence=0.5):
+    def __init__(self, width=400, height=150, min_detection_confidence=0.7, min_tracking_confidence=0.5):
         self.cap = cv2.VideoCapture(0)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
@@ -144,8 +144,8 @@ class MultiPersonHandTracker:
                 
                 # Add person label
                 cv2.putText(frame, f"Person {person_id + 1}", 
-                        (wrist_x-50, wrist_y-50),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+                        (wrist_x-50, wrist_y+50),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
             
             # Calculate and display gradients if both hands are detected for a person
             if len(person1_wrists) == 2:
@@ -156,10 +156,10 @@ class MultiPersonHandTracker:
                 mid_x = (person1_wrists[0][0] + person1_wrists[1][0]) // 2
                 mid_y = (person1_wrists[0][1] + person1_wrists[1][1]) // 2
                 cv2.putText(frame, f"P1 Gradient: {gradient:.2f}", 
-                        (mid_x, mid_y),
+                        (mid_x-50, mid_y+20),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.person1_color, 2)
                 cv2.putText(frame, f"P1 Angle: {angle:.1f}°", 
-                        (mid_x, mid_y + 20),
+                        (mid_x-50, mid_y+40),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.person1_color, 2)
                 self.person1_gradient = gradient
                 self.person1_wrist_positions = person1_wrists
