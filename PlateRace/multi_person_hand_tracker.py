@@ -183,12 +183,12 @@ class MultiPersonHandTracker:
         # Add gradient information to top of frame
         if self.person1_gradient is not None:
             cv2.putText(frame, f"Person 1 Gradient: {self.person1_gradient:.2f}", 
-                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, self.person1_color, 2)
+                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, self.person1_color, 1)
         if self.person2_gradient is not None:
             cv2.putText(frame, f"Person 2 Gradient: {self.person2_gradient:.2f}", 
-                    (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, self.person2_color, 2)
+                    (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, self.person2_color, 1)
         
-        return frame, self.person1_wrist_positions, self.person2_wrist_positions
+        return frame, self.person1_gradient, self.person2_gradient
 
     def release(self):
         self.cap.release()
