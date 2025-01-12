@@ -89,7 +89,7 @@ class AbstractCar:
                     self.finish_timer = 0
                 else:
                     self.max_velocity_onTrack *= 0.5
-                    self.finish_timer = 0
+                    self.finish_timer = -3
      
     def raceEnd(self):
         if self.lap > 3:
@@ -103,10 +103,20 @@ class PlayerCar(AbstractCar):
         global direction
         
         keys = pygame.key.get_pressed()
+        
+        # turning left
         if keys[self.controls[1]]:
             angle_D[self.PLAYER_NUM - 1] += 5
+        elif keys[self.controls[1]]:
+            angle_D[self.PLAYER_NUM - 1] += 10
+            
+        # turning right
         if keys[self.controls[3]]:
             angle_D[self.PLAYER_NUM - 1] -= 5
+        elif keys[self.controls[3]]:
+            angle_D[self.PLAYER_NUM - 1] -= 10
+            
+        
         if angle_D[self.PLAYER_NUM - 1] < 0:
             angle_D[self.PLAYER_NUM - 1] += 360
         if angle_D[self.PLAYER_NUM - 1] > 360:
@@ -160,7 +170,7 @@ class PlayerCar(AbstractCar):
          
     def bounce_on_wall(self):
         if self.collide(WALL_MASK, *(-25, -25)):
-            self.velocity = -self.velocity
+            self.velocity = -self.velocity * 0.5
             self.draw()
             
     def antiCheat(self):
