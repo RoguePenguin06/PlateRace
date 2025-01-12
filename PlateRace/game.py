@@ -208,21 +208,30 @@ class PlateRace:
             self._handle_input()
             
             if gamePlaying:
-                # Get hand tracking data
-                player_frame, person1_gradient, person2_gradient = self.hand_tracker.process_frame()
-                if player_frame is None:
-                    break
+                try:
+                    # Get hand tracking data
+                    result = self.hand_tracker.process_frame()
+                    if result is None:
+                        continue
+                        
+                    player_frame, person1_gradient, person2_gradient = result
                     
-                cv2.imshow("Multi-Person Hand Tracking", player_frame)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
-                # Update game state
-                self._game_logic(person1_gradient, person2_gradient)
-                self._draw()
+                    # Update game state if we have a valid frame
+                    if player_frame is not None:
+                        self._game_logic(person1_gradient, person2_gradient)
+                        self._draw()
+                    
+                except Exception as e:
+                    print(f"Error in main loop: {str(e)}")
+                    continue
+                    
             else:
                 quitTimer -= getDeltaTime()
                 if quitTimer <= 0:
+                    if hasattr(self.hand_tracker, 'release'):
+                        self.hand_tracker.release()
                     quit()
+
             
     def _handle_input(self):
         for event in pygame.event.get():

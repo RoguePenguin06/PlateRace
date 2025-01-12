@@ -1,6 +1,7 @@
 import cv2
 import mediapipe as mp
 import numpy as np
+import math
 
 class MultiPersonHandTracker:
     def __init__(self, width=400, height=150, min_detection_confidence=0.7, min_tracking_confidence=0.5):
@@ -22,64 +23,119 @@ class MultiPersonHandTracker:
         self.person2_color = (0, 255, 0)  # Green for person 2
         
         self.previous_hands = []  # Store previous hand positions for tracking
+        self.debug =True  # Flag to enable/disable debug mode
 
-    def calculate_wrist_gradient(self, wrist1, wrist2):
-        """
-        Calculate the gradient between two wrist points
-        Returns: gradient (slope) and angle in degrees
-        """
-        # Extract x and y coordinates
-        x1, y1 = wrist1
-        x2, y2 = wrist2
-        
-        # Avoid division by zero
-        if x2 - x1 == 0:
-            return float('inf'), 90.0
-        
-        # Calculate gradient (slope)
-        gradient = (y2 - y1) / (x2 - x1)
-        
-        # Calculate angle in degrees
-        angle = np.degrees(np.arctan(gradient))
-        
-        return gradient, angle
-
-    def assign_hands_to_people(self, hand_landmarks):
-        """
-        Assign detected hands to different people based on spatial proximity
-        """
-        current_hands = []
-        for landmarks in hand_landmarks:
-            # Get wrist position
-            wrist_x = landmarks.landmark[0].x
-            wrist_y = landmarks.landmark[0].y
-            current_hands.append((wrist_x, wrist_y))
-        
-        # If this is the first detection, split hands based on x-coordinate
-        if not self.previous_hands:
-            if len(current_hands) >= 2:
-                # Sort by x-coordinate and group pairs
-                sorted_hands = sorted(current_hands, key=lambda x: x[0])
-                person1_hands = sorted_hands[:2]
-                person2_hands = sorted_hands[2:4]
-                self.previous_hands = person1_hands + person2_hands
-                return [(0, h) if i < 2 else (1, h) for i, h in enumerate(sorted_hands)]
+    def calculate_wrist_gradient(self, hand1, hand2):
+        """Calculate gradient between two hands using wrist positions"""
+        try:
+            # Get wrist landmarks from the hand landmark objects
+            if isinstance(hand1, tuple) or isinstance(hand2, tuple):
+                return None
+                
+            wrist1 = hand1.landmark[self.mp_hands.HandLandmark.WRIST]
+            wrist2 = hand2.landmark[self.mp_hands.HandLandmark.WRIST]
             
-        # For subsequent frames, assign based on proximity to previous positions
-        assignments = []
-        for hand in current_hands:
-            if not self.previous_hands:
-                person_id = 0
-            else:
-                # Assign to closest previous position
-                distances = [np.sqrt((hand[0] - prev[0])**2 + (hand[1] - prev[1])**2) 
-                           for prev in self.previous_hands]
-                closest_idx = np.argmin(distances)
-                person_id = 0 if closest_idx < 2 else 1
-            assignments.append((person_id, hand))
-        
-        self.previous_hands = [hand for _, hand in assignments]
-        return assignments
+            # Convert to pixel coordinates
+            frame_height, frame_width = self.frame.shape[:2]
+            x1 = wrist1.x * frame_width
+            y1 = wrist1.y * frame_height
+            x2 = wrist2.x * frame_width
+            y2 = wrist2.y * frame_height
+            
+            # Calculate gradient, avoiding division by zero
+            dx = x2 - x1
+            if abs(dx) < 1e-6:  # Avoid division by zero
+                return None
+                
+            gradient = (y2 - y1) / dx
+            return gradient
+            
+        except Exception as e:
+            print(f"Error calculating gradient: {str(e)}")
+            return None
+
+    def assign_hands_to_people(self, hands):
+        """
+        Assign hands to people based on their position in the divided camera view
+        Left side is for Person 1, Right side is for Person 2
+        """
+        try:
+            MAX_HAND_DISTANCE = 300  # Maximum pixel distance between a person's hands
+            
+            person1_hands = []
+            person2_hands = []
+            
+            if not hands or len(hands) < 2:
+                return [], []
+            
+            # Get frame dimensions
+            frame_height, frame_width = self.frame.shape[:2]
+            middle_x = frame_width // 2
+            
+            # Draw division line for debugging
+            if self.debug:
+                cv2.line(self.frame, (middle_x, 0), (middle_x, frame_height), (0, 0, 255), 2)
+                cv2.putText(self.frame, "Player 1", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+                cv2.putText(self.frame, "Player 2", (middle_x + 10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            
+            # Sort hands into left and right sides
+            left_hands = []
+            right_hands = []
+            
+            for hand_landmarks in hands:
+                wrist = hand_landmarks.landmark[self.mp_hands.HandLandmark.WRIST]
+                x = int(wrist.x * frame_width)
+                y = int(wrist.y * frame_height)
+                
+                if x < middle_x:  # Left side - Player 1
+                    left_hands.append((x, y, hand_landmarks))
+                else:  # Right side - Player 2
+                    right_hands.append((x, y, hand_landmarks))
+            
+            # Process left side (Player 1)
+            if len(left_hands) >= 2:
+                # Find closest pair of hands on left side
+                min_distance = float('inf')
+                best_pair = None
+                
+                for i in range(len(left_hands)):
+                    for j in range(i + 1, len(left_hands)):
+                        x1, y1, _ = left_hands[i]
+                        x2, y2, _ = left_hands[j]
+                        distance = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+                        
+                        if distance < min_distance and distance <= MAX_HAND_DISTANCE:
+                            min_distance = distance
+                            best_pair = (left_hands[i][2], left_hands[j][2])
+                
+                if best_pair:
+                    person1_hands = list(best_pair)
+            
+            # Process right side (Player 2)
+            if len(right_hands) >= 2:
+                # Find closest pair of hands on right side
+                min_distance = float('inf')
+                best_pair = None
+                
+                for i in range(len(right_hands)):
+                    for j in range(i + 1, len(right_hands)):
+                        x1, y1, _ = right_hands[i]
+                        x2, y2, _ = right_hands[j]
+                        distance = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+                        
+                        if distance < min_distance and distance <= MAX_HAND_DISTANCE:
+                            min_distance = distance
+                            best_pair = (right_hands[i][2], right_hands[j][2])
+                
+                if best_pair:
+                    person2_hands = list(best_pair)
+            
+            return person1_hands, person2_hands
+            
+        except Exception as e:
+            print(f"Error assigning hands: {str(e)}")
+            return [], []
+
     
     
     def get_game_data(self):
@@ -98,97 +154,60 @@ class MultiPersonHandTracker:
         }
     
 
+    # In multi_person_hand_tracker.py
     def process_frame(self):
-        success, frame = self.cap.read()
-        if not success:
-            return None
-        
-        frame = cv2.flip(frame, 1)
-        frame_RGB = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = self.hands.process(frame_RGB)
-        
-        # Reset current frame's data
-        self.person1_gradient = None
-        self.person2_gradient = None
-        self.person1_wrist_positions = None
-        self.person2_wrist_positions = None
-        
-        if results.multi_hand_landmarks:
-            assignments = self.assign_hands_to_people(results.multi_hand_landmarks)
+        try:
+            success, self.frame = self.cap.read()
+            if not success:
+                print("Failed to capture frame")
+                return (None, None, None)  # Return tuple of None values
+
+            # Flip the frame horizontally for a later selfie-view display
+            self.frame = cv2.flip(self.frame, 1)
             
-            person1_wrists = []
-            person2_wrists = []
-            
-            for (person_id, _), hand_landmarks in zip(assignments, results.multi_hand_landmarks):
-                color = self.person1_color if person_id == 0 else self.person2_color
+            # Convert the BGR image to RGB
+            image = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
+            results = self.hands.process(image)
+
+            # Reset gradients
+            person1_gradient = None
+            person2_gradient = None
+
+            if results.multi_hand_landmarks:
+                # Get hand assignments
+                person1_hands, person2_hands = self.assign_hands_to_people(results.multi_hand_landmarks)
                 
-                # Draw landmarks
-                self.mp_drawing.draw_landmarks(
-                    frame,
-                    hand_landmarks,
-                    self.mp_hands.HAND_CONNECTIONS,
-                    self.mp_drawing.DrawingSpec(color=color, thickness=2, circle_radius=2),
-                    self.mp_drawing.DrawingSpec(color=color, thickness=2)
-                )
-                
-                # Get wrist position in pixel coordinates
-                h, w, _ = frame.shape
-                wrist_x = int(hand_landmarks.landmark[0].x * w)
-                wrist_y = int(hand_landmarks.landmark[0].y * h)
-                
-                # Store wrist positions by person
-                if person_id == 0:
-                    person1_wrists.append((wrist_x, wrist_y))
-                else:
-                    person2_wrists.append((wrist_x, wrist_y))
-                
-                # Add person label
-                cv2.putText(frame, f"Person {person_id + 1}", 
-                        (wrist_x-50, wrist_y+50),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-            
-            # Calculate and display gradients if both hands are detected for a person
-            if len(person1_wrists) == 2:
-                gradient, angle = self.calculate_wrist_gradient(person1_wrists[0], person1_wrists[1])
-                # Draw line between wrists
-                cv2.line(frame, person1_wrists[0], person1_wrists[1], self.person1_color, 2)
-                # Display gradient and angle
-                mid_x = (person1_wrists[0][0] + person1_wrists[1][0]) // 2
-                mid_y = (person1_wrists[0][1] + person1_wrists[1][1]) // 2
-                cv2.putText(frame, f"P1 Gradient: {gradient:.2f}", 
-                        (mid_x-50, mid_y+20),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.person1_color, 2)
-                cv2.putText(frame, f"P1 Angle: {angle:.1f}°", 
-                        (mid_x-50, mid_y+40),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.person1_color, 2)
-                self.person1_gradient = gradient
-                self.person1_wrist_positions = person1_wrists
-            
-            if len(person2_wrists) == 2:
-                gradient, angle = self.calculate_wrist_gradient(person2_wrists[0], person2_wrists[1])
-                # Draw line between wrists
-                cv2.line(frame, person2_wrists[0], person2_wrists[1], self.person2_color, 2)
-                # Display gradient and angle
-                mid_x = (person2_wrists[0][0] + person2_wrists[1][0]) // 2
-                mid_y = (person2_wrists[0][1] + person2_wrists[1][1]) // 2
-                cv2.putText(frame, f"P2 Gradient: {gradient:.2f}", 
-                        (mid_x, mid_y),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.person2_color, 2)
-                cv2.putText(frame, f"P2 Angle: {angle:.1f}°", 
-                        (mid_x, mid_y + 20),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, self.person2_color, 2)
-                self.person2_gradient = gradient
-                self.person2_wrist_positions = person2_wrists
-        
-        # Add gradient information to top of frame
-        if self.person1_gradient is not None:
-            cv2.putText(frame, f"Person 1 Gradient: {self.person1_gradient:.2f}", 
-                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, self.person1_color, 1)
-        if self.person2_gradient is not None:
-            cv2.putText(frame, f"Person 2 Gradient: {self.person2_gradient:.2f}", 
-                    (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, self.person2_color, 1)
-        
-        return frame, self.person1_gradient, self.person2_gradient
+                # Calculate and draw for person 1
+                if person1_hands and len(person1_hands) == 2:
+                    for hand in person1_hands:
+                        self.mp_drawing.draw_landmarks(
+                            self.frame,
+                            hand,
+                            self.mp_hands.HAND_CONNECTIONS,
+                            self.mp_drawing.DrawingSpec(color=(255, 0, 0), thickness=2, circle_radius=2),
+                            self.mp_drawing.DrawingSpec(color=(255, 0, 0), thickness=2)
+                        )
+                    person1_gradient = self.calculate_wrist_gradient(person1_hands[0], person1_hands[1])
+
+                # Calculate and draw for person 2
+                if person2_hands and len(person2_hands) == 2:
+                    for hand in person2_hands:
+                        self.mp_drawing.draw_landmarks(
+                            self.frame,
+                            hand,
+                            self.mp_hands.HAND_CONNECTIONS,
+                            self.mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=2, circle_radius=2),
+                            self.mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=2)
+                        )
+                    person2_gradient = self.calculate_wrist_gradient(person2_hands[0], person2_hands[1])
+
+            # Always return a tuple
+            return (self.frame, person1_gradient, person2_gradient)
+    
+        except Exception as e:
+            print(f"Error in process_frame: {str(e)}")
+            return (None, None, None)
+
 
     def release(self):
         self.cap.release()

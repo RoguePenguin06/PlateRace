@@ -9,3 +9,4 @@ A game to learn `pygame` and computer vision controls.
 ```
 pip3.11 install -r requirements.txt
 ``` 
+
