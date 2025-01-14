@@ -51,11 +51,15 @@ class AssetLoader:
             "CAR_RED": "assets/car_red.png",
             "P1WIN": "assets/p1_win.png",
             "P2WIN": "assets/p2_win.png",
+            "ANTI_CHEAT_1": "assets/AntiCheat1.png",
+            "ANTI_CHEAT_2": "assets/AntiCheat2.png",
         }
 
         loaded_assets = {}
         for asset_name, asset_path in assets.items():
             loaded_assets[asset_name] = load_image_from_s3(self.bucket_name, asset_path)
+            if loaded_assets[asset_name] is None:
+                raise RuntimeError(f"Failed to load {asset_name} from S3")
 
         return loaded_assets
 
@@ -122,9 +126,10 @@ class AbstractCar:
 
 
 class PlayerCar(AbstractCar):
-    def __init__(self, max_velocity, player_num, start_pos, car_image):
+    def __init__(self, max_velocity, player_num, start_pos, car_image, game):
         super().__init__(max_velocity, player_num, start_pos)
         self.img = car_image
+        self.game = game  # Store reference to game instance
 
     def move_player(self, hand_gradient):
         # Only add non-None gradients to history
@@ -209,11 +214,11 @@ class PlayerCar(AbstractCar):
             self.velocity = -self.velocity * 0.5
 
     def antiCheat(self):
-        if self.collide(ANTI_CHEAT_1_MASK, *(0, 300)):
+        if self.collide(self.game.ANTI_CHEAT_1_MASK, *(0, 300)):
             self.checkpoint1 = True
-        if self.collide(ANTI_CHEAT_2_MASK, *(450, 0)):
+        if self.collide(self.game.ANTI_CHEAT_2_MASK, *(450, 0)):
             self.checkpoint2 = True
-        if self.collide(ANTI_CHEAT_2_MASK, *(450, 430)):
+        if self.collide(self.game.ANTI_CHEAT_2_MASK, *(450, 430)):
             self.checkpoint3 = True
 
 
@@ -225,7 +230,7 @@ class PlateRace:
         asset_loader = AssetLoader("your-bucket-name")
         game_assets = asset_loader.load_game_assets()
 
-        # Assign loaded assets to global variables or class attributes
+        # Assign loaded assets to class attributes
         self.TRACK = game_assets["TRACK"]
         self.GRASS = game_assets["GRASS"]
         self.FINISH = game_assets["FINISH"]
@@ -234,11 +239,15 @@ class PlateRace:
         self.CAR_RED = game_assets["CAR_RED"]
         self.P1WIN = game_assets["P1WIN"]
         self.P2WIN = game_assets["P2WIN"]
+        self.ANTI_CHEAT_1 = game_assets["ANTI_CHEAT_1"]
+        self.ANTI_CHEAT_2 = game_assets["ANTI_CHEAT_2"]
 
         # Create masks after loading images
         self.TRACK_MASK = pygame.mask.from_surface(self.TRACK)
         self.FINISH_MASK = pygame.mask.from_surface(self.FINISH)
         self.WALL_MASK = pygame.mask.from_surface(self.WALL)
+        self.ANTI_CHEAT_1_MASK = pygame.mask.from_surface(self.ANTI_CHEAT_1)
+        self.ANTI_CHEAT_2_MASK = pygame.mask.from_surface(self.ANTI_CHEAT_2)
 
         self.WIDTH, self.HEIGHT = self.TRACK.get_width(), self.TRACK.get_height()
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
@@ -247,8 +256,8 @@ class PlateRace:
         self.hand_tracker = MultiPersonHandTracker()
 
         # Initialize players with loaded assets
-        self.player_1_car = PlayerCar(10, 1, (845, 350), self.CAR_BLUE)
-        self.player_2_car = PlayerCar(10, 2, (910, 350), self.CAR_RED)
+        self.player_1_car = PlayerCar(10, 1, (845, 350), self.CAR_BLUE, self)
+        self.player_2_car = PlayerCar(10, 2, (910, 350), self.CAR_RED, self)
 
     def main_loop(self):
         global gamePlaying, quitTimer, deltaTime
