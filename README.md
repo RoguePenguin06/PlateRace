@@ -9,18 +9,19 @@ Clone the repository:`git clone https://github.com/MgnMtn/PlateRace`
 
 Apple Silicon:
  - Install Python 3.11.
- - Run pip3.11 install -r requirements.txt
+ - Run `pip3.11 install -r requirements.txt`
 
 Other systems:
  - Ensure Python 3 is installed.
- - Run pip3 install -r requirements.txt
+ - Run `pip3 install -r requirements.txt`
 
 **Run the game:**
 
 Apple Silicon:
  - Execute `python3.11 PlateRace`
+
 Other systems:
- - Execute python3 PlateRace
+ - Execute `python3 PlateRace`
 
 ## Inspiration
 Originally meant to be a paper plate as the controller, hence the name PlateRace. Since we used hand tracking instead, you can hold anything or even nothing, and it still works just as well.
