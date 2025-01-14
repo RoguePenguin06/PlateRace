@@ -17,6 +17,7 @@ gamePlaying = True
 quitTimer = 3
 
 
+
 def load_image_from_s3(bucket_name, key):
     """Load an image from S3 and convert to pygame surface"""
     s3_client = boto3.client(
@@ -43,16 +44,16 @@ class AssetLoader:
     def load_game_assets(self):
         """Load all game assets from S3"""
         assets = {
-            "TRACK": "assets/track.png",
-            "GRASS": "assets/grass.png",
-            "FINISH": "assets/finish.png",
-            "WALL": "assets/wall.png",
-            "CAR_BLUE": "assets/car_blue.png",
-            "CAR_RED": "assets/car_red.png",
-            "P1WIN": "assets/p1_win.png",
-            "P2WIN": "assets/p2_win.png",
-            "ANTI_CHEAT_1": "assets/AntiCheat1.png",
-            "ANTI_CHEAT_2": "assets/AntiCheat2.png",
+            "TRACK": "Track.png",
+            "GRASS": "grass.png",
+            "FINISH": "Finish.png",
+            "WALL": "wall.png",
+            "CAR_BLUE": "SportsCar(Blue).png",
+            "CAR_RED": "SportsCar(Red).png",
+            "P1WIN": "P1Win.png",
+            "P2WIN": "P2Win.png",
+            "ANTI_CHEAT_1": "AntiCheat1.png",
+            "ANTI_CHEAT_2": "AntiCheat2.png",
         }
 
         loaded_assets = {}
@@ -65,7 +66,7 @@ class AssetLoader:
 
 
 class AbstractCar:
-    def __init__(self, max_velocity, player_num, start_pos):
+    def __init__(self, max_velocity, player_num, start_pos, game):
         self.max_velocity_onTrack = max_velocity
         self.max_velocity = max_velocity
         self.velocity = 0
@@ -76,6 +77,8 @@ class AbstractCar:
         self.lap = 0
         self.finish_timer = 2
         self.gradient_history = []  # For smoothing hand tracking input
+        self.game = game  # Store game instance
+
 
         if player_num != 0:
             self.PLAYER_NUM = player_num
@@ -84,9 +87,9 @@ class AbstractCar:
             self.checkpoint3 = True
 
             if self.PLAYER_NUM == 1:
-                self.img = CAR_BLUE
+                self.img = self.game.CAR_BLUE
             elif self.PLAYER_NUM == 2:
-                self.img = CAR_RED
+                self.img = self.game.CAR_RED
 
     def draw(self, win):
         blit_rotate_center(win, self.img, (self.x, self.y), self.angle)
@@ -98,7 +101,7 @@ class AbstractCar:
         return poi
 
     def onTrack(self):
-        if self.collide(TRACK_MASK):
+        if self.collide(self.game.TRACK_MASK):
             self.max_velocity = self.max_velocity_onTrack
         else:
             self.max_velocity = self.max_velocity_onTrack * 0.25
@@ -107,7 +110,7 @@ class AbstractCar:
         global deltaTime
         self.finish_timer += deltaTime
         if self.finish_timer >= 2:
-            if self.collide(FINISH_MASK, *FINISH_POS):
+            if self.collide(self.game.FINISH_MASK, *self.game.FINISH_POS):
                 if (
                     self.checkpoint1 and self.checkpoint2 and self.checkpoint3
                 ) or self.PLAYER_NUM == 0:
@@ -127,7 +130,7 @@ class AbstractCar:
 
 class PlayerCar(AbstractCar):
     def __init__(self, max_velocity, player_num, start_pos, car_image, game):
-        super().__init__(max_velocity, player_num, start_pos)
+        super().__init__(max_velocity, player_num, start_pos, game)
         self.img = car_image
         self.game = game  # Store reference to game instance
 
@@ -210,7 +213,7 @@ class PlayerCar(AbstractCar):
         self.angle = angle_D[self.PLAYER_NUM - 1]
 
     def bounce_on_wall(self):
-        if self.collide(WALL_MASK, *(-25, -25)):
+        if self.collide(self.game.WALL_MASK, *(-25, -25)):
             self.velocity = -self.velocity * 0.5
 
     def antiCheat(self):
@@ -227,24 +230,25 @@ class PlateRace:
         pygame.init()
 
         # Load assets from S3
-        asset_loader = AssetLoader("your-bucket-name")
+        asset_loader = AssetLoader("plate-race")
         game_assets = asset_loader.load_game_assets()
 
         # Assign loaded assets to class attributes
-        self.TRACK = game_assets["TRACK"]
-        self.GRASS = game_assets["GRASS"]
-        self.FINISH = game_assets["FINISH"]
-        self.WALL = game_assets["WALL"]
-        self.CAR_BLUE = game_assets["CAR_BLUE"]
-        self.CAR_RED = game_assets["CAR_RED"]
-        self.P1WIN = game_assets["P1WIN"]
-        self.P2WIN = game_assets["P2WIN"]
-        self.ANTI_CHEAT_1 = game_assets["ANTI_CHEAT_1"]
-        self.ANTI_CHEAT_2 = game_assets["ANTI_CHEAT_2"]
+        self.TRACK = resize_image(game_assets["TRACK"], 2.5)
+        self.GRASS = resize_image(game_assets["GRASS"], 3)
+        self.FINISH = resize_image(game_assets["FINISH"], 2.6)
+        self.WALL = resize_image(game_assets["WALL"], 2.5)
+        self.CAR_BLUE = resize_image(game_assets["CAR_BLUE"], 0.5)
+        self.CAR_RED = resize_image(game_assets["CAR_RED"], 0.5)
+        self.P1WIN = resize_image(game_assets["P1WIN"], 2.5)
+        self.P2WIN = resize_image(game_assets["P2WIN"], 2.5)
+        self.ANTI_CHEAT_1 = resize_image(game_assets["ANTI_CHEAT_1"], 2.5)
+        self.ANTI_CHEAT_2 = resize_image(game_assets["ANTI_CHEAT_2"], 2.5)
 
-        # Create masks after loading images
+        # Create masks after loading and resizing images
         self.TRACK_MASK = pygame.mask.from_surface(self.TRACK)
         self.FINISH_MASK = pygame.mask.from_surface(self.FINISH)
+        self.FINISH_POS = (831, 300)
         self.WALL_MASK = pygame.mask.from_surface(self.WALL)
         self.ANTI_CHEAT_1_MASK = pygame.mask.from_surface(self.ANTI_CHEAT_1)
         self.ANTI_CHEAT_2_MASK = pygame.mask.from_surface(self.ANTI_CHEAT_2)
@@ -318,10 +322,10 @@ class PlateRace:
         deltaTime = getDeltaTime()
 
     def _draw(self):
-        self.screen.blit(GRASS, (0, 0))
-        self.screen.blit(TRACK, (0, 0))
-        self.screen.blit(FINISH, FINISH_POS)
-        self.screen.blit(WALL, (-25, -25))
+        self.screen.blit(self.GRASS, (0, 0))
+        self.screen.blit(self.TRACK, (0, 0))
+        self.screen.blit(self.FINISH, self.FINISH_POS)
+        self.screen.blit(self.WALL, (-25, -25))
 
         self.player_1_car.draw(self.screen)
         self.player_2_car.draw(self.screen)
