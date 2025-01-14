@@ -35,7 +35,6 @@ ANTI_CHEAT_2 = resize_image(pygame.image.load(ASSETS_DIR / "AntiCheat2.png"), 2.
 ANTI_CHEAT_2_MASK = pygame.mask.from_surface(ANTI_CHEAT_2)
 
 angle_D = [0, 0]
-direction = 0
 deltaTime = 0
 gamePlaying = True
 quitTimer = 3
@@ -101,7 +100,7 @@ class AbstractCar:
 class PlayerCar(AbstractCar):
     def move_player(self, hand_gradient):
         # Only add non-None gradients to history
-        if hand_gradient is not None:
+        if (hand_gradient is not None) and (abs(hand_gradient) < 2):
             self.gradient_history.append(hand_gradient)
         
         # Keep history at max length
@@ -121,37 +120,32 @@ class PlayerCar(AbstractCar):
                     smoothed_gradient = 0
                 
                 # Convert gradient to angle change
-                if smoothed_gradient > 0.2:  # Tilted right
-                    angle_D[self.PLAYER_NUM - 1] -= 5
-                elif smoothed_gradient < -0.2:  # Tilted left
-                    angle_D[self.PLAYER_NUM - 1] += 5
-                
-                # Forward movement based on hand being level
-                if abs(smoothed_gradient) < 0.3:
-                    self.velocity = min(self.velocity + self.acceleration, self.max_velocity)
-                    global direction
-                    direction = 1
-                else:
-                    self.velocity = max(self.velocity - self.deceleration, 0)
-            else:
-                # No valid gradients, slow down
-                self.velocity = max(self.velocity - self.deceleration, 0)
+                if smoothed_gradient > 0:  # Tilted right
+                    angle_D[self.PLAYER_NUM - 1] -= 5 * smoothed_gradient
+                elif smoothed_gradient < 0:  # Tilted left
+                    angle_D[self.PLAYER_NUM - 1] -= 5 * smoothed_gradient
+                   
+        
 
     def move(self, person1_gradient, person2_gradient):
         if self.PLAYER_NUM == 1:
             self.move_player(person1_gradient)
         elif self.PLAYER_NUM == 2:
             self.move_player(person2_gradient)
+            
+        self.rotate()
 
         if angle_D[self.PLAYER_NUM - 1] < 0:
             angle_D[self.PLAYER_NUM - 1] += 360
         if angle_D[self.PLAYER_NUM - 1] > 360:
             angle_D[self.PLAYER_NUM - 1] -= 360
             
-        self.rotate()
+        
         self.onTrack()
 
         angle_R = angle_D[self.PLAYER_NUM - 1] * (math.pi/180)
+
+        self.velocity = min(self.velocity + self.acceleration, self.max_velocity)
 
         if angle_D[self.PLAYER_NUM - 1] <= 90:
             self.H_velocity = -self.velocity * math.sin(angle_R)
@@ -166,8 +160,8 @@ class PlayerCar(AbstractCar):
             self.H_velocity = self.velocity * math.cos(angle_R-((3*math.pi)/2))
             self.V_velocity = -self.velocity * math.sin(angle_R-((3*math.pi)/2))
 
-        self.x += self.H_velocity * direction
-        self.y += self.V_velocity * direction
+        self.x += self.H_velocity
+        self.y += self.V_velocity
         
         self.bounce_on_wall()
         self.antiCheat()
@@ -201,6 +195,7 @@ class PlateRace:
         self.player_2_car = PlayerCar(10, 2, (910, 350))
         
     def main_loop(self):
+        tick = 10
         global gamePlaying, quitTimer, deltaTime
         
         while True:
@@ -208,23 +203,28 @@ class PlateRace:
             self._handle_input()
             
             if gamePlaying:
-                try:
-                    # Get hand tracking data
-                    result = self.hand_tracker.process_frame()
-                    if result is None:
-                        continue
+                tick += 1
+                if tick >= 10:
+                    try:
+                        tick = 0
+
+                        # Get hand tracking data
+                        result = self.hand_tracker.process_frame()
+                        #if result is None:
+                            #continue
                         
-                    player_frame, person1_gradient, person2_gradient = result
+                        player_frame, person1_gradient, person2_gradient = result
                     
-                    # Update game state if we have a valid frame
-                    if player_frame is not None:
-                        cv2.imshow("Multi-Person Hand Tracking", player_frame)
-                        self._game_logic(person1_gradient, person2_gradient)
-                        self._draw()
+                        # Update game state if we have a valid frame
+                        if player_frame is not None:
+                            cv2.imshow("Multi-Person Hand Tracking", player_frame)
                     
-                except Exception as e:
-                    print(f"Error in main loop: {str(e)}")
-                    continue
+                    except Exception as e:
+                        print(f"Error in main loop: {str(e)}")
+                        continue
+
+                self._draw()
+                self._game_logic(person1_gradient, person2_gradient)
                     
             else:
                 quitTimer -= getDeltaTime()
@@ -268,7 +268,3 @@ class PlateRace:
         self.player_1_car.draw(self.screen)
         self.player_2_car.draw(self.screen)
         pygame.display.update()
-
-if __name__ == "__main__":
-    game = PlateRace()
-    game.main_loop()
