@@ -3,7 +3,7 @@
 A game to learn `pygame` and computer vision controls built as part of the AWS Game Builder Challenge. Checkout our submission [here](https://devpost.com/software/wip-jg3vpe).
 
 ## Requirements
-Clone the repository:`git clone https://github.com/MgnMtn/PlateRace`
+Clone the repository:`git clone https://github.com/RoguePenguin06/PlateRace`
 
 **Install dependencies:**
 
